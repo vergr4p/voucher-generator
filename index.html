@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voucher Generator</title>
+  <style>
+    /* CSS styles go here */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 10px;
+    }
+    h1 {
+      color: #333;
+      font-size: 100px; /* Adjust the font size to your desired value */
+      margin-top: 0;
+      text-align: center;
+    }
+    h2 {
+      color: #333;
+      font-size: 80px; /* Adjust the font size to your desired value */
+      margin-top: 0;
+      text-align: center;
+    }
+    p {
+      color: #666;
+      font-size: 30px; /* Adjust the font size to your desired value */
+      margin-top: 0;
+      text-align: center;
+    }
+    /* Adjust the font size of the navigation links */
+    nav ul {
+      list-style-type: none;
+      padding: 0;
+      display: flex;
+      justify-content: space-around;
+      margin: 10px 0;
+    }
+    nav ul li a {
+      font-size: 64px; /* Adjust the font size to your desired value */
+    }
+    main {
+      margin-top: 20px;
+      text-align: center;
+    }
+    section {
+      margin-bottom: 20px;
+    }
+    button {
+      display: block;
+      margin: 0 auto; /* Center the button horizontally */
+      margin-top: 10px;
+      padding: 20px;
+      font-size: 30px; /* Adjust the font size to your desired value */
+    }
+    footer {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .generated-text {
+      font-size: 60px; /* Adjust the font size to your desired value */
+      font-weight: bold; /* Make the text bold */
+      color: red; /* Set the text color to red */
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Voucher Generator</h1>
+  </header>
+  
+  <nav>
+    <ul>
+      <li><a href="#" onclick="pickRandomValue('1day.csv')">1 Day</a></li>
+      <li><a href="#" onclick="pickRandomValue('3days.csv')">3 Days</a></li>
+      <li><a href="#" onclick="pickRandomValue('1week.csv')">1 Week</a></li>
+      <li><a href="#" onclick="pickRandomValue('1month.csv')">1 Month</a></li>
+    </ul>
+  </nav>
+  
+  <main>    
+    <section>
+      <h2>GENERATED CODE</h2>
+      <p class="generated-text" id="textElement">Loading text...</p>
+      <button id="markUsedButton" onclick="markAsUsed()">Mark as Used</button>
+    </section>
+  </main>
+  
+  <footer>
+    <p>&copy; 2023 Simple HTML Website. All rights reserved.</p>
+  </footer>
+
+  <script>
+    let selectedRow = -1;
+    let selectedDuration = '';
+
+    function pickRandomValue(file) {
+      selectedDuration = file;
+
+      fetch(file)
+        .then(response => response.text())
+        .then(text => {
+          // Parse the CSV content
+          const lines = text.split('\n');
+          const validLines = lines.filter(line => !line.includes(',used')); // Exclude lines with "used" in column 4
+          const randomIndex = Math.floor(Math.random() * (validLines.length - 1)) + 1; // Exclude the first line
+          const randomLine = validLines[randomIndex];
+          const columns = randomLine.split(',');
+          const randomValue = columns[2];
+          
+          // Manipulate the DOM to display the random value
+          const textElement = document.getElementById('textElement');
+          textElement.textContent = randomValue || 'No available codes'; // Display a default message if randomValue is empty or undefined
+          textElement.classList.add('generated-text'); // Add the generated-text class
+
+          // Set the selected row index
+          selectedRow = lines.indexOf(randomLine);
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+
+    function markAsUsed() {
+      if (selectedRow === -1) {
+        return;
+      }
+
+      const textElement = document.getElementById('textElement');
+      const generatedCode = textElement.textContent;
+
+      // Send the updated value to the server
+      fetch('update_value.php', {
+        method: 'POST',
+        body: JSON.stringify({ duration: selectedDuration, row: selectedRow, value: 'used' }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+        .then(response => response.text())
+        .then(message => {
+          alert(message); // Display the response message
+
+          // Copy the generated code to the clipboard
+          const el = document.createElement('textarea');
+          el.value = generatedCode;
+          document.body.appendChild(el);
+          el.select();
+          document.execCommand('copy');
+          document.body.removeChild(el);
+
+          // Update the displayed value if the request was successful
+          textElement.textContent = (message === 'Value updated successfully.') ? 'used' : generatedCode;
+        })
+        .catch(error => {
+          console.error('Error:', error);
+        });
+    }
+  </script>
+</body>
+</html>
